@@ -28,6 +28,12 @@ func (p *AstPrinter) visitLiteralExpr(expr *Literal) any {
 		return "nil"
 	}
 	switch vt := expr.value.(type) {
+	case bool:
+		if vt {
+			return "true"
+		} else {
+			return "false"
+		}
 	case string:
 		return vt
 	case int:

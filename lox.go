@@ -1,6 +1,7 @@
 package golox
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 )
@@ -45,29 +46,49 @@ func (l *Lox) runFile(path string) error {
 
 func (l *Lox) runPrompt() error {
 	for {
-		var line string
+
 		fmt.Print("> ")
-		if _, err := fmt.Scan(&line); err != nil {
-			return err
+
+		reader := bufio.NewReader(os.Stdin)
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
 		}
+
 		l.run(line)
 		l.hadError = false
 	}
 }
 
 func (l *Lox) run(source string) {
+
 	scanner := NewScanner(l, source)
 	tokens := scanner.scanTokens()
-	for _, token := range tokens {
-		fmt.Printf("%s\n", token)
+
+	parser := NewParser(l, tokens)
+	expression := parser.Parse()
+
+	if l.hadError {
+		return
 	}
+
+	fmt.Println(NewAstPrinter().Print(expression))
+
 }
 
 func (l *Lox) Error(line int, message string) {
 	l.Report(line, "", message)
 }
 
+func (l *Lox) ErrorWithToken(token Token, message string) {
+	if token.kind == TkEof {
+		l.Report(token.line, " at end", message)
+	} else {
+		l.Report(token.line, fmt.Sprintf(" at '%s'", token.lexeme), message)
+	}
+}
+
 func (l *Lox) Report(line int, where string, message string) {
-	fmt.Printf("[line %d] Error%s: %s", line, where, message)
+	fmt.Printf("[line %d] Error%s: %s\n", line, where, message)
 	l.hadError = true
 }
