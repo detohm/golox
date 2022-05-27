@@ -135,6 +135,7 @@ func (s *Scanner) scanToken() {
 			s.identifier()
 		} else {
 			s.lox.Error(s.line, "Unexpected character.")
+			break
 		}
 	}
 }

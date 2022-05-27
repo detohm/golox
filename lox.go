@@ -27,7 +27,7 @@ func (l *Lox) Main(args []string) {
 		return
 	}
 	if len(args) == 2 {
-		if err := l.runFile(args[0]); err != nil {
+		if err := l.runFile(args[1]); err != nil {
 			fmt.Println(err)
 		}
 	} else {
@@ -42,6 +42,7 @@ func (l *Lox) runFile(path string) error {
 	if err != nil {
 		return err
 	}
+
 	l.run(string(bytes))
 	if l.hadError {
 		os.Exit(65)
