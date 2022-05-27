@@ -2,10 +2,10 @@
 package golox
 
 type Expr interface {
-  Accept(visitor Visitor) (any, error)
+  Accept(visitor ExprVisitor) (any, error)
 }
 
-type Visitor interface {
+type ExprVisitor interface {
   visitBinaryExpr(expr *Binary) (any, error)
   visitGroupingExpr(expr *Grouping) (any, error)
   visitLiteralExpr(expr *Literal) (any, error)
@@ -26,7 +26,7 @@ func NewBinary(left Expr, operator *Token, right Expr) *Binary {
   }
 }
 
-func (expr *Binary) Accept(visitor Visitor) (any, error) {
+func (expr *Binary) Accept(visitor ExprVisitor) (any, error) {
   return visitor.visitBinaryExpr(expr)
 }
 
@@ -40,7 +40,7 @@ func NewGrouping(expression Expr) *Grouping {
   }
 }
 
-func (expr *Grouping) Accept(visitor Visitor) (any, error) {
+func (expr *Grouping) Accept(visitor ExprVisitor) (any, error) {
   return visitor.visitGroupingExpr(expr)
 }
 
@@ -54,7 +54,7 @@ func NewLiteral(value any) *Literal {
   }
 }
 
-func (expr *Literal) Accept(visitor Visitor) (any, error) {
+func (expr *Literal) Accept(visitor ExprVisitor) (any, error) {
   return visitor.visitLiteralExpr(expr)
 }
 
@@ -70,7 +70,7 @@ func NewUnary(operator *Token, right Expr) *Unary {
   }
 }
 
-func (expr *Unary) Accept(visitor Visitor) (any, error) {
+func (expr *Unary) Accept(visitor ExprVisitor) (any, error) {
   return visitor.visitUnaryExpr(expr)
 }
 

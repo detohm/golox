@@ -61,7 +61,8 @@ func (l *Lox) runPrompt() error {
 		reader := bufio.NewReader(os.Stdin)
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("read string error", err)
+			continue
 		}
 
 		l.run(line)
@@ -75,14 +76,13 @@ func (l *Lox) run(source string) {
 	tokens := scanner.scanTokens()
 
 	parser := NewParser(l, tokens)
-	expression := parser.Parse()
+	statements := parser.Parse()
 
 	if l.hadError {
 		return
 	}
 
-	l.interpreter.interpret(expression)
-	// fmt.Println(NewAstPrinter().Print(expression))
+	l.interpreter.interpret(statements)
 
 }
 

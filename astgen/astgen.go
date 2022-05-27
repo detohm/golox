@@ -7,12 +7,19 @@ import (
 )
 
 func Generate(outputDir string) {
+
 	defineAst(outputDir, "Expr", []string{
 		"Binary : left Expr, operator *Token, right Expr",
 		"Grouping : expression Expr",
 		"Literal : value any",
 		"Unary : operator *Token, right Expr",
 	})
+
+	defineAst(outputDir, "Stmt", []string{
+		"Expression : expression Expr",
+		"Print : expression Expr",
+	})
+
 }
 
 func defineAst(outputDir string, baseName string, types []string) error {
@@ -25,8 +32,8 @@ func defineAst(outputDir string, baseName string, types []string) error {
 	file.WriteString("package golox\n\n")
 
 	// Expr interface
-	file.WriteString("type Expr interface {\n")
-	file.WriteString("  Accept(visitor Visitor) (any, error)\n")
+	file.WriteString(fmt.Sprintf("type %s interface {\n", baseName))
+	file.WriteString(fmt.Sprintf("  Accept(visitor %sVisitor) (any, error)\n", baseName))
 	file.WriteString("}\n\n")
 
 	defineVisitor(file, baseName, types)
@@ -43,7 +50,7 @@ func defineAst(outputDir string, baseName string, types []string) error {
 }
 
 func defineVisitor(file *os.File, baseName string, types []string) {
-	file.WriteString("type Visitor interface {\n")
+	file.WriteString(fmt.Sprintf("type %sVisitor interface {\n", baseName))
 	for _, v := range types {
 		typeName := strings.TrimSpace(strings.Split(v, ":")[0])
 		file.WriteString(fmt.Sprintf("  visit%s%s(%s *%s) (any, error)\n",
@@ -82,7 +89,7 @@ func defineType(file *os.File, baseName string, typeName string, fieldList strin
 	file.WriteString("}\n\n")
 
 	// visitor pattern
-	file.WriteString(fmt.Sprintf("func (expr *%s) Accept(visitor Visitor) (any, error) {\n", typeName))
+	file.WriteString(fmt.Sprintf("func (expr *%s) Accept(visitor %sVisitor) (any, error) {\n", typeName, baseName))
 	file.WriteString(fmt.Sprintf("  return visitor.visit%s%s(expr)\n",
 		typeName,
 		baseName,

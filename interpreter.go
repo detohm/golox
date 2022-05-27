@@ -16,24 +16,48 @@ func NewInterpreter(lox *Lox) *Interpreter {
 	}
 }
 
-func (i *Interpreter) interpret(expression Expr) {
-	value, err := i.evaluate(expression)
-	if err != nil {
-		// TODO - better type casting
-		i.lox.RuntimeError(err.(RuntimeError))
-		return
+func (i *Interpreter) interpret(statements []Stmt) {
+	for _, statement := range statements {
+		err := i.execute(statement)
+		if err != nil {
+			// TODO - better type casting
+			i.lox.RuntimeError(err.(RuntimeError))
+			return
+		}
 	}
-	fmt.Println(i.stringify(value))
 }
 
-/*
-type Visitor interface {
-  visitBinaryExpr(expr *Binary) any
-  visitGroupingExpr(expr *Grouping) any
-  visitLiteralExpr(expr *Literal) any
-  visitUnaryExpr(expr *Unary) any
+/* Intepreter implements on both ExprVisitor and StmtVisitor interfaces
+
+type ExprVisitor interface {
+  visitBinaryExpr(expr *Binary) (any, error)
+  visitGroupingExpr(expr *Grouping) (any, error)
+  visitLiteralExpr(expr *Literal) (any, error)
+  visitUnaryExpr(expr *Unary) (any, error)
 }
+
+type StmtVisitor interface {
+  visitExpressionStmt(stmt *Expression) (any, error)
+  visitPrintStmt(stmt *Print) (any, error)
+}
+
 */
+func (i *Interpreter) visitExpressionStmt(stmt *Expression) (any, error) {
+	_, err := i.evaluate(stmt.expression)
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *Interpreter) visitPrintStmt(stmt *Print) (any, error) {
+	value, err := i.evaluate(stmt.expression)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(i.stringify(value))
+	return nil, nil
+}
 
 func (i *Interpreter) visitLiteralExpr(expr *Literal) (any, error) {
 	return expr.value, nil
@@ -156,6 +180,14 @@ func (i *Interpreter) checkNumberOperands(operator *Token, left any, right any) 
 
 func (i *Interpreter) evaluate(expr Expr) (any, error) {
 	return expr.Accept(i)
+}
+
+func (i *Interpreter) execute(stmt Stmt) error {
+	_, err := stmt.Accept(i)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (i *Interpreter) isTruthy(ex any) bool {

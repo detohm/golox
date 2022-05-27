@@ -1,6 +1,17 @@
 package golox
 
+import "fmt"
+
 /* Grammar Rules
+
+program        -> statement* EOF ;
+
+statement      -> exprStmt
+               | printStmt ;
+
+exprStmt       -> expression ";" ;
+printStmt      -> "print" expression ";" ;
+
 expression     -> equality ;
 equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -29,12 +40,43 @@ func NewParser(lox *Lox, tokens []Token) *Parser {
 	}
 }
 
-func (p *Parser) Parse() Expr {
+func (p *Parser) Parse() []Stmt {
+	statements := []Stmt{}
+	for !p.isAtEnd() {
+		stmt, err := p.statement()
+		if err != nil {
+			// TODO - better error handling
+			fmt.Print(err)
+			return statements
+		}
+		statements = append(statements, stmt)
+	}
+	return statements
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(TkPrint) {
+		return p.printStatement()
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() (Stmt, error) {
 	expr, err := p.expression()
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return expr
+	p.consume(TkSemicolon, "Expect ';' after value.")
+	return NewPrint(expr), nil
+}
+
+func (p *Parser) expressionStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	p.consume(TkSemicolon, "Expect ';' after expression.")
+	return NewExpression(expr), nil
 }
 
 func (p *Parser) expression() (Expr, error) {
