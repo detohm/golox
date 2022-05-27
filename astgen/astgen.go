@@ -26,7 +26,7 @@ func defineAst(outputDir string, baseName string, types []string) error {
 
 	// Expr interface
 	file.WriteString("type Expr interface {\n")
-	file.WriteString("  Accept(visitor Visitor) any\n")
+	file.WriteString("  Accept(visitor Visitor) (any, error)\n")
 	file.WriteString("}\n\n")
 
 	defineVisitor(file, baseName, types)
@@ -46,7 +46,7 @@ func defineVisitor(file *os.File, baseName string, types []string) {
 	file.WriteString("type Visitor interface {\n")
 	for _, v := range types {
 		typeName := strings.TrimSpace(strings.Split(v, ":")[0])
-		file.WriteString(fmt.Sprintf("  visit%s%s(%s *%s) any\n",
+		file.WriteString(fmt.Sprintf("  visit%s%s(%s *%s) (any, error)\n",
 			typeName,
 			baseName,
 			strings.ToLower(baseName),
@@ -82,7 +82,7 @@ func defineType(file *os.File, baseName string, typeName string, fieldList strin
 	file.WriteString("}\n\n")
 
 	// visitor pattern
-	file.WriteString(fmt.Sprintf("func (expr *%s) Accept(visitor Visitor) any {\n", typeName))
+	file.WriteString(fmt.Sprintf("func (expr *%s) Accept(visitor Visitor) (any, error) {\n", typeName))
 	file.WriteString(fmt.Sprintf("  return visitor.visit%s%s(expr)\n",
 		typeName,
 		baseName,

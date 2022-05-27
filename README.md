@@ -4,5 +4,7 @@ golox is Lox programming language implementation using Go. This project is for e
 # Features
 - Scanner + Lexer
 - Abstract Syntax Tree Generator (AST)
+- Parser
+- Intepreter
 ## Reference
 Lox programming language is originally designed by Bob Nystrom for the Crafting Interpreters book.

@@ -7,13 +7,18 @@ import (
 )
 
 type Lox struct {
-	hadError bool
+	hadError        bool
+	hadRuntimeError bool
+	interpreter     *Interpreter
 }
 
 func NewLox() *Lox {
-	return &Lox{
-		hadError: false,
+	lox := &Lox{
+		hadError:        false,
+		hadRuntimeError: false,
 	}
+	lox.interpreter = NewInterpreter(lox)
+	return lox
 }
 
 func (l *Lox) Main(args []string) {
@@ -72,12 +77,18 @@ func (l *Lox) run(source string) {
 		return
 	}
 
-	fmt.Println(NewAstPrinter().Print(expression))
+	l.interpreter.interpret(expression)
+	// fmt.Println(NewAstPrinter().Print(expression))
 
 }
 
 func (l *Lox) Error(line int, message string) {
 	l.Report(line, "", message)
+}
+
+func (l *Lox) RuntimeError(err RuntimeError) {
+	fmt.Printf("%s\n[line%d]", err.Message, err.Token.line)
+	l.hadRuntimeError = true
 }
 
 func (l *Lox) ErrorWithToken(token Token, message string) {

@@ -12,50 +12,61 @@ func NewAstPrinter() *AstPrinter {
 }
 
 func (p *AstPrinter) Print(expr Expr) string {
-	return expr.Accept(p).(string)
+	str, err := expr.Accept(p)
+	if err != nil {
+		// quick and dirty return
+		return "error" + err.Error()
+	}
+	return str.(string)
 }
 
-func (p *AstPrinter) visitBinaryExpr(expr *Binary) any {
+func (p *AstPrinter) visitBinaryExpr(expr *Binary) (any, error) {
 	return p.parenthesize(expr.operator.lexeme, expr.left, expr.right)
 }
 
-func (p *AstPrinter) visitGroupingExpr(expr *Grouping) any {
+func (p *AstPrinter) visitGroupingExpr(expr *Grouping) (any, error) {
 	return p.parenthesize("group", expr.expression)
 }
 
-func (p *AstPrinter) visitLiteralExpr(expr *Literal) any {
+func (p *AstPrinter) visitLiteralExpr(expr *Literal) (any, error) {
 	if expr.value == nil {
-		return "nil"
+		return "nil", nil
 	}
 	switch vt := expr.value.(type) {
 	case bool:
 		if vt {
-			return "true"
+			return "true", nil
 		} else {
-			return "false"
+			return "false", nil
 		}
 	case string:
-		return vt
+		return vt, nil
 	case int:
-		return fmt.Sprintf("%d", vt)
+		return fmt.Sprintf("%d", vt), nil
 	case float64:
-		return fmt.Sprintf("%.2f", vt)
+		return fmt.Sprintf("%.2f", vt), nil
 	}
-	return "err" // TODO - better error handling
+	// TODO - better error handling
+	return "err", nil
 }
 
-func (p *AstPrinter) visitUnaryExpr(expr *Unary) any {
+func (p *AstPrinter) visitUnaryExpr(expr *Unary) (any, error) {
 	return p.parenthesize(expr.operator.lexeme, expr.right)
 }
 
 // parenthesize - private helper function
-func (p *AstPrinter) parenthesize(name string, exprs ...Expr) string {
+func (p *AstPrinter) parenthesize(name string, exprs ...Expr) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("(" + name)
 	for _, expr := range exprs {
 		sb.WriteString(" ")
-		sb.WriteString(expr.Accept(p).(string))
+
+		v, err := expr.Accept(p)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(v.(string))
 	}
 	sb.WriteString(")")
-	return sb.String()
+	return sb.String(), nil
 }
