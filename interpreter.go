@@ -2,6 +2,7 @@ package golox
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 )
 
@@ -20,8 +21,9 @@ func (i *Interpreter) interpret(expression Expr) {
 	if err != nil {
 		// TODO - better type casting
 		i.lox.RuntimeError(err.(RuntimeError))
+		return
 	}
-	fmt.Printf("%v\n", value)
+	fmt.Println(i.stringify(value))
 }
 
 /*
@@ -175,4 +177,21 @@ func (i *Interpreter) isEqual(a any, b any) bool {
 	}
 	// TODO - ensure the golang comparison machanism
 	return a == b
+}
+
+func (i *Interpreter) stringify(a any) string {
+	if a == nil {
+		return "nil"
+	}
+	if reflect.TypeOf(a).Kind() == reflect.Float64 {
+
+		value := a.(float64)
+		if math.Mod(value, 1.0) == 0 {
+			return fmt.Sprintf("%.0f", value)
+		}
+		return fmt.Sprintf("%.2f", value)
+
+	}
+
+	return fmt.Sprintf("%v", a)
 }

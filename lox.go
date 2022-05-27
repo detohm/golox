@@ -46,6 +46,9 @@ func (l *Lox) runFile(path string) error {
 	if l.hadError {
 		os.Exit(65)
 	}
+	if l.hadRuntimeError {
+		os.Exit(70)
+	}
 	return nil
 }
 
@@ -87,7 +90,7 @@ func (l *Lox) Error(line int, message string) {
 }
 
 func (l *Lox) RuntimeError(err RuntimeError) {
-	fmt.Printf("%s\n[line%d]", err.Message, err.Token.line)
+	fmt.Printf("%s\n[line %d]\n", err.Message, err.Token.line)
 	l.hadRuntimeError = true
 }
 
