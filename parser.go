@@ -1,10 +1,16 @@
 package golox
 
-import "fmt"
+import (
+	"fmt"
+)
 
 /* Grammar Rules
 
-program        -> statement* EOF ;
+program        -> declaration* EOF ;
+
+declaration    -> varDecl
+               | statement ;
+varDecl        -> "var" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      -> exprStmt
                | printStmt ;
@@ -19,8 +25,10 @@ term           -> factor ( ( "-" | "+" ) factor )* ;
 factor         -> unary ( ( "/" | "*" ) unary )* ;
 unary          -> ( "!" | "-" ) unary
                | primary ;
-primary        -> NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" ;
+primary        -> "true" | "false" | "nil"
+			   | NUMBER | STRING |
+               | "(" expression ")"
+			   | IDENTIFIER ;
 */
 type Parser struct {
 	lox     *Lox
@@ -43,7 +51,7 @@ func NewParser(lox *Lox, tokens []Token) *Parser {
 func (p *Parser) Parse() []Stmt {
 	statements := []Stmt{}
 	for !p.isAtEnd() {
-		stmt, err := p.statement()
+		stmt, err := p.declaration()
 		if err != nil {
 			// TODO - better error handling
 			fmt.Print(err)
@@ -52,6 +60,44 @@ func (p *Parser) Parse() []Stmt {
 		statements = append(statements, stmt)
 	}
 	return statements
+}
+
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(TkVar) {
+		stmt, err := p.varDeclaration()
+		if err != nil {
+			p.synchronize()
+			return nil, nil // cut off error propagation
+		}
+		return stmt, nil
+	}
+
+	stmt, err := p.statement()
+	if err != nil {
+		p.synchronize()
+		return nil, nil
+	}
+	return stmt, nil
+
+}
+
+func (p *Parser) varDeclaration() (Stmt, error) {
+	name, err := p.consume(TkIdentifier, "Expect variable name.")
+	if err != nil {
+		return nil, err
+	}
+	var initializer Expr
+	if p.match(TkEqual) {
+		initializer, err = p.expression()
+
+	}
+	_, err = p.consume(TkSemicolon, "Expect ';' after variable declaration.")
+	if err != nil {
+		return nil, err
+	}
+
+	return NewVar(name, initializer), nil
+
 }
 
 func (p *Parser) statement() (Stmt, error) {
@@ -166,8 +212,10 @@ func (p *Parser) unary() (Expr, error) {
 	return p.primary()
 }
 
-// primary  ->  NUMBER | STRING | "true" | "false" | "nil"
-//          | "(" expression ")" ;
+// primary -> "true" | "false" | "nil"
+// 			| NUMBER | STRING |
+// 			| "(" expression ")"
+// 			| IDENTIFIER ;
 func (p *Parser) primary() (Expr, error) {
 
 	if p.match(TkFalse) {
@@ -182,6 +230,11 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(TkNumber, TkString) {
 		return NewLiteral(p.previous().literal), nil
 	}
+
+	if p.match(TkIdentifier) {
+		return NewVariable(p.previous()), nil
+	}
+
 	if p.match(TkLeftParen) {
 		expr, err := p.expression()
 		if err != nil {

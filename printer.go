@@ -54,6 +54,10 @@ func (p *AstPrinter) visitUnaryExpr(expr *Unary) (any, error) {
 	return p.parenthesize(expr.operator.lexeme, expr.right)
 }
 
+func (p *AstPrinter) visitVariableExpr(expr *Variable) (any, error) {
+	return "(var)", nil
+}
+
 // parenthesize - private helper function
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) (string, error) {
 	var sb strings.Builder

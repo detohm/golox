@@ -7,12 +7,14 @@ import (
 )
 
 type Interpreter struct {
-	lox *Lox
+	lox         *Lox
+	environment *Environment
 }
 
 func NewInterpreter(lox *Lox) *Interpreter {
 	return &Interpreter{
-		lox: lox,
+		lox:         lox,
+		environment: NewEnvironment(),
 	}
 }
 
@@ -59,6 +61,19 @@ func (i *Interpreter) visitPrintStmt(stmt *Print) (any, error) {
 	return nil, nil
 }
 
+func (i *Interpreter) visitVarStmt(stmt *Var) (any, error) {
+	var value any = nil
+	var err error = nil
+	if stmt.initializer != nil {
+		value, err = i.evaluate(stmt.initializer)
+		if err != nil {
+			return nil, err
+		}
+	}
+	i.environment.define(stmt.name.lexeme, value)
+	return nil, nil
+}
+
 func (i *Interpreter) visitLiteralExpr(expr *Literal) (any, error) {
 	return expr.value, nil
 }
@@ -85,6 +100,10 @@ func (i *Interpreter) visitUnaryExpr(expr *Unary) (any, error) {
 
 	// unreachable
 	return nil, nil
+}
+
+func (i *Interpreter) visitVariableExpr(expr *Variable) (any, error) {
+	return i.environment.get(expr.name)
 }
 
 func (i *Interpreter) visitBinaryExpr(expr *Binary) (any, error) {

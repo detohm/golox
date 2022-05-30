@@ -13,11 +13,13 @@ func Generate(outputDir string) {
 		"Grouping : expression Expr",
 		"Literal : value any",
 		"Unary : operator *Token, right Expr",
+		"Variable : name *Token",
 	})
 
 	defineAst(outputDir, "Stmt", []string{
 		"Expression : expression Expr",
 		"Print : expression Expr",
+		"Var : name *Token, initializer Expr",
 	})
 
 }
