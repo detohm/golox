@@ -221,6 +221,28 @@ func (i *Interpreter) execute(stmt Stmt) error {
 	return nil
 }
 
+func (i *Interpreter) visitBlockStmt(stmt *Block) (any, error) {
+	err := i.executeBlock(stmt.statements,
+		NewEnvironmentWithEnclosing(i.environment))
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *Interpreter) executeBlock(statements []Stmt, environment *Environment) error {
+	previous := i.environment
+	i.environment = environment
+	for _, statement := range statements {
+		err := i.execute(statement)
+		if err != nil {
+			return err
+		}
+	}
+	i.environment = previous
+	return nil
+}
+
 func (i *Interpreter) isTruthy(ex any) bool {
 	if ex == nil {
 		return false

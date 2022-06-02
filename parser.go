@@ -13,7 +13,11 @@ declaration    -> varDecl
 varDecl        -> "var" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      -> exprStmt
-               | printStmt ;
+               | printStmt
+			   | block ;
+
+block          -> "{" declaration* "}" ;
+
 
 exprStmt       -> expression ";" ;
 printStmt      -> "print" expression ";" ;
@@ -110,6 +114,13 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(TkPrint) {
 		return p.printStatement()
 	}
+	if p.match(TkLeftBrace) {
+		statements, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+		return NewBlock(statements), nil
+	}
 	return p.expressionStatement()
 }
 
@@ -118,7 +129,10 @@ func (p *Parser) printStatement() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.consume(TkSemicolon, "Expect ';' after value.")
+	_, err = p.consume(TkSemicolon, "Expect ';' after value.")
+	if err != nil {
+		return nil, err
+	}
 	return NewPrint(expr), nil
 }
 
@@ -127,8 +141,27 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.consume(TkSemicolon, "Expect ';' after expression.")
+	_, err = p.consume(TkSemicolon, "Expect ';' after expression.")
+	if err != nil {
+		return nil, err
+	}
 	return NewExpression(expr), nil
+}
+
+func (p *Parser) block() ([]Stmt, error) {
+	statements := []Stmt{}
+	for !p.check(TkRightBrace) && !p.isAtEnd() {
+		dec, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, dec)
+	}
+	_, err := p.consume(TkRightBrace, "Expect '}' after block.")
+	if err != nil {
+		return nil, err
+	}
+	return statements, nil
 }
 
 func (p *Parser) expression() (Expr, error) {
