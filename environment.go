@@ -33,5 +33,5 @@ func (e *Environment) assign(name *Token, value any) error {
 	}
 
 	return NewRuntimeError(*name,
-		fmt.Sprint("Undefined variable '%s'.", name.lexeme))
+		fmt.Sprintf("Undefined variable '%s'.", name.lexeme))
 }

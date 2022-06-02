@@ -92,6 +92,9 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 	var initializer Expr
 	if p.match(TkEqual) {
 		initializer, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
 
 	}
 	_, err = p.consume(TkSemicolon, "Expect ';' after variable declaration.")
