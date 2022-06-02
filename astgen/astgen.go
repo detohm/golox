@@ -9,6 +9,7 @@ import (
 func Generate(outputDir string) {
 
 	defineAst(outputDir, "Expr", []string{
+		"Assign : name *Token, value Expr",
 		"Binary : left Expr, operator *Token, right Expr",
 		"Grouping : expression Expr",
 		"Literal : value any",

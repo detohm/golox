@@ -58,6 +58,10 @@ func (p *AstPrinter) visitVariableExpr(expr *Variable) (any, error) {
 	return "(var)", nil
 }
 
+func (p *AstPrinter) visitAssignExpr(expr *Assign) (any, error) {
+	return fmt.Sprintf("(assign %s:%s)", expr.name.lexeme, expr.value), nil
+}
+
 // parenthesize - private helper function
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) (string, error) {
 	var sb strings.Builder

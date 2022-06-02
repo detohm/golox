@@ -18,7 +18,10 @@ statement      -> exprStmt
 exprStmt       -> expression ";" ;
 printStmt      -> "print" expression ";" ;
 
-expression     -> equality ;
+expression     -> assignment ;
+assignment     -> IDENTIFIER "=" assignment
+               | equality ;
+
 equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           -> factor ( ( "-" | "+" ) factor )* ;
@@ -126,7 +129,32 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+	if p.match(TkEqual) {
+		equals := p.previous()
+		value, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+
+		// only l-value is allowed
+		v, ok := expr.(*Variable)
+		if ok {
+			name := v.name
+			return NewAssign(name, value), nil
+		}
+
+		err = p.error(equals, "Invalid assignment target.")
+		return nil, err
+	}
+	return expr, nil
 }
 
 // equality  ->  comparison ( ( "!=" | "==" ) comparison )* ;
