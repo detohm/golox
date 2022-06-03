@@ -20,6 +20,10 @@ func (p *AstPrinter) Print(expr Expr) string {
 	return str.(string)
 }
 
+func (p *AstPrinter) visitLogicalExpr(expr *Logical) (any, error) {
+	return p.parenthesize(expr.operator.lexeme, expr.left, expr.right)
+}
+
 func (p *AstPrinter) visitBinaryExpr(expr *Binary) (any, error) {
 	return p.parenthesize(expr.operator.lexeme, expr.left, expr.right)
 }

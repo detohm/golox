@@ -13,18 +13,32 @@ declaration    -> varDecl
 varDecl        -> "var" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      -> exprStmt
+			   | forStmt
+			   | ifStmt
                | printStmt
+			   | whileStmt
 			   | block ;
+
+ifStmt         -> "if" "(" expression ")" statement
+               ( "else" statement )? ;
 
 block          -> "{" declaration* "}" ;
 
+forStmt        -> "for" "(" (varDecl | exprStmt | ";")
+			   expression? ";"
+               expression? ")" statement ;
+
+whileStmt	   -> "while" "(" expression ")" statement ;
 
 exprStmt       -> expression ";" ;
 printStmt      -> "print" expression ";" ;
 
 expression     -> assignment ;
 assignment     -> IDENTIFIER "=" assignment
-               | equality ;
+               | logic_or ;
+
+logic_or       -> logic_and ( "or" logic_and )* ;
+logic_and      -> equality ( "and" equality )* ;
 
 equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
@@ -111,8 +125,17 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 }
 
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(TkFor) {
+		return p.forStatement()
+	}
+	if p.match(TkIf) {
+		return p.ifStatement()
+	}
 	if p.match(TkPrint) {
 		return p.printStatement()
+	}
+	if p.match(TkWhile) {
+		return p.whileStatement()
 	}
 	if p.match(TkLeftBrace) {
 		statements, err := p.block()
@@ -122,6 +145,36 @@ func (p *Parser) statement() (Stmt, error) {
 		return NewBlock(statements), nil
 	}
 	return p.expressionStatement()
+}
+
+func (p *Parser) ifStatement() (Stmt, error) {
+	_, err := p.consume(TkLeftParen, "Expect '(' after 'if'.")
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(TkRightParen, "Expect ')' after if condition.")
+	if err != nil {
+		return nil, err
+	}
+
+	thenBranch, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	var elseBranch Stmt = nil
+	if p.match(TkElse) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return NewIf(condition, thenBranch, elseBranch), nil
+
 }
 
 func (p *Parser) printStatement() (Stmt, error) {
@@ -134,6 +187,99 @@ func (p *Parser) printStatement() (Stmt, error) {
 		return nil, err
 	}
 	return NewPrint(expr), nil
+}
+
+func (p *Parser) forStatement() (Stmt, error) {
+	_, err := p.consume(TkLeftParen, "Expect '(' after 'for'.")
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer Stmt = nil
+	if p.match(TkSemicolon) {
+		initializer = nil
+	} else if p.match(TkVar) {
+		initializer, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		initializer, err = p.expressionStatement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var condition Expr = nil
+	if !p.check(TkSemicolon) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	_, err = p.consume(TkSemicolon, "Expect ';' after loop condition.")
+	if err != nil {
+		return nil, err
+	}
+
+	var increment Expr = nil
+	if !p.check(TkRightParen) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	_, err = p.consume(TkRightParen, "Expect ')' after for clauses.")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	if increment != nil {
+		statements := []Stmt{
+			body,
+			NewExpression(increment),
+		}
+		body = NewBlock(statements)
+	}
+
+	if condition == nil {
+		condition = NewLiteral(true)
+	}
+	body = NewWhile(condition, body)
+
+	if initializer != nil {
+		body = NewBlock([]Stmt{
+			initializer,
+			body,
+		})
+	}
+
+	return body, nil
+}
+
+func (p *Parser) whileStatement() (Stmt, error) {
+	_, err := p.consume(TkLeftParen, "Expect '(' after 'while'.")
+	if err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(TkRightParen, "Expect ')' after condition.")
+	if err != nil {
+		return nil, err
+	}
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return NewWhile(condition, body), nil
 }
 
 func (p *Parser) expressionStatement() (Stmt, error) {
@@ -169,7 +315,7 @@ func (p *Parser) expression() (Expr, error) {
 }
 
 func (p *Parser) assignment() (Expr, error) {
-	expr, err := p.equality()
+	expr, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +335,41 @@ func (p *Parser) assignment() (Expr, error) {
 
 		err = p.error(equals, "Invalid assignment target.")
 		return nil, err
+	}
+	return expr, nil
+}
+
+// logic_or  ->  logic_and ( "or" logic_and )* ;
+func (p *Parser) or() (Expr, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+	for p.match(TkOr) {
+		operator := p.previous()
+		right, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+		expr = NewLogical(expr, operator, right)
+	}
+	return expr, nil
+}
+
+// logic_and  ->  equality ( "and" equality )* ;
+func (p *Parser) and() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(TkAnd) {
+		operator := p.previous()
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+		expr = NewLogical(expr, operator, right)
 	}
 	return expr, nil
 }

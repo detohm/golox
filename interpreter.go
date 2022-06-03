@@ -52,6 +52,22 @@ func (i *Interpreter) visitExpressionStmt(stmt *Expression) (any, error) {
 	return nil, nil
 }
 
+func (i *Interpreter) visitIfStmt(stmt *If) (any, error) {
+	cond, err := i.evaluate(stmt.condition)
+	if err != nil {
+		return nil, err
+	}
+	if i.isTruthy(cond) {
+		err = i.execute(stmt.thenBranch)
+	} else if stmt.elseBranch != nil {
+		err = i.execute(stmt.elseBranch)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 func (i *Interpreter) visitPrintStmt(stmt *Print) (any, error) {
 	value, err := i.evaluate(stmt.expression)
 	if err != nil {
@@ -74,6 +90,25 @@ func (i *Interpreter) visitVarStmt(stmt *Var) (any, error) {
 	return nil, nil
 }
 
+func (i *Interpreter) visitWhileStmt(stmt *While) (any, error) {
+	cond, err := i.evaluate(stmt.condition)
+	if err != nil {
+		return nil, err
+	}
+
+	for i.isTruthy(cond) {
+		err := i.execute(stmt.body)
+		if err != nil {
+			return nil, err
+		}
+		cond, err = i.evaluate(stmt.condition)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
 func (i *Interpreter) visitAssignExpr(expr *Assign) (any, error) {
 	value, err := i.evaluate(expr.value)
 	if err != nil {
@@ -88,6 +123,27 @@ func (i *Interpreter) visitAssignExpr(expr *Assign) (any, error) {
 
 func (i *Interpreter) visitLiteralExpr(expr *Literal) (any, error) {
 	return expr.value, nil
+}
+
+func (i *Interpreter) visitLogicalExpr(expr *Logical) (any, error) {
+	left, err := i.evaluate(expr.left)
+	if err != nil {
+		return nil, err
+	}
+	if expr.operator.kind == TkOr {
+		// short circuit for OR
+		if i.isTruthy(left) {
+			return left, nil
+		}
+	} else {
+		// short circuit for AND
+		if !i.isTruthy(left) {
+			return left, nil
+		}
+	}
+
+	return i.evaluate(expr.right)
+
 }
 
 func (i *Interpreter) visitGroupingExpr(expr *Grouping) (any, error) {
