@@ -11,6 +11,7 @@ func Generate(outputDir string) {
 	defineAst(outputDir, "Expr", []string{
 		"Assign : name *Token, value Expr",
 		"Binary : left Expr, operator *Token, right Expr",
+		"Call : callee Expr, paren *Token, arguments []Expr",
 		"Grouping : expression Expr",
 		"Literal : value any",
 		"Logical : left Expr, operator *Token, right Expr",
@@ -21,6 +22,7 @@ func Generate(outputDir string) {
 	defineAst(outputDir, "Stmt", []string{
 		"Block : statements []Stmt",
 		"Expression : expression Expr",
+		"Function : name *Token, params []*Token, body []Stmt",
 		"If : condition Expr, thenBranch Stmt, elseBranch Stmt",
 		"Print : expression Expr",
 		"Var : name *Token, initializer Expr",

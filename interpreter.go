@@ -8,13 +8,19 @@ import (
 
 type Interpreter struct {
 	lox         *Lox
+	globals     *Environment
 	environment *Environment
 }
 
 func NewInterpreter(lox *Lox) *Interpreter {
+
+	globals := NewEnvironment()
+	globals.define("clock", NewClock())
+
 	return &Interpreter{
 		lox:         lox,
-		environment: NewEnvironment(),
+		globals:     globals,
+		environment: globals,
 	}
 }
 
@@ -49,6 +55,12 @@ func (i *Interpreter) visitExpressionStmt(stmt *Expression) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	return nil, nil
+}
+
+func (i *Interpreter) visitFunctionStmt(stmt *Function) (any, error) {
+	function := NewLoxFunction(stmt)
+	i.environment.define(stmt.name.lexeme, function)
 	return nil, nil
 }
 
@@ -248,6 +260,42 @@ func (i *Interpreter) visitBinaryExpr(expr *Binary) (any, error) {
 
 	// unreachable
 	return nil, nil
+}
+
+func (i *Interpreter) visitCallExpr(expr *Call) (any, error) {
+	callee, err := i.evaluate(expr.callee)
+	if err != nil {
+		return nil, err
+	}
+
+	arguments := []any{}
+	for _, argument := range expr.arguments {
+		value, err := i.evaluate(argument)
+		if err != nil {
+			return nil, err
+		}
+		arguments = append(arguments, value)
+	}
+
+	function, ok := callee.(LoxCallable)
+	if !ok {
+		return nil, NewRuntimeError(
+			*expr.paren,
+			"Can only call functions and classes.",
+		)
+	}
+
+	if len(arguments) != function.arity() {
+		return nil, NewRuntimeError(
+			*expr.paren,
+			fmt.Sprintf("Expected %d arguments but got %d.",
+				function.arity(),
+				len(arguments),
+			),
+		)
+	}
+
+	return function.call(i, arguments)
 }
 
 func (i *Interpreter) checkNumberOperand(operator *Token, operand any) error {

@@ -66,6 +66,10 @@ func (p *AstPrinter) visitAssignExpr(expr *Assign) (any, error) {
 	return fmt.Sprintf("(assign %s:%s)", expr.name.lexeme, expr.value), nil
 }
 
+func (p *AstPrinter) visitCallExpr(expr *Call) (any, error) {
+	return fmt.Sprintf("(call %s)", expr.callee), nil
+}
+
 // parenthesize - private helper function
 func (p *AstPrinter) parenthesize(name string, exprs ...Expr) (string, error) {
 	var sb strings.Builder

@@ -8,8 +8,15 @@ import (
 
 program        -> declaration* EOF ;
 
-declaration    -> varDecl
+declaration    -> funDecl
+			   |varDecl
                | statement ;
+
+funDecl        -> "fun" function ;
+function       -> IDENTIFIER "(" parameters? ")" block ;
+
+parameters	   -> IDENTIFIER ( "," IDENTIFIER )* ;
+
 varDecl        -> "var" IDENTIFIER ( "=" expression )? ";" ;
 
 statement      -> exprStmt
@@ -44,8 +51,11 @@ equality       -> comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     -> term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           -> factor ( ( "-" | "+" ) factor )* ;
 factor         -> unary ( ( "/" | "*" ) unary )* ;
-unary          -> ( "!" | "-" ) unary
+unary          -> ( "!" | "-" ) unary | call ;
+call		   -> primary ( "(" arguments? ")" )* ;
                | primary ;
+argument 	   -> expression ("," expression )* ;
+
 primary        -> "true" | "false" | "nil"
 			   | NUMBER | STRING |
                | "(" expression ")"
@@ -84,6 +94,9 @@ func (p *Parser) Parse() []Stmt {
 }
 
 func (p *Parser) declaration() (Stmt, error) {
+	if p.match(TkFun) {
+		return p.function("function")
+	}
 	if p.match(TkVar) {
 		stmt, err := p.varDeclaration()
 		if err != nil {
@@ -99,6 +112,60 @@ func (p *Parser) declaration() (Stmt, error) {
 		return nil, nil
 	}
 	return stmt, nil
+
+}
+
+func (p *Parser) function(kind string) (Stmt, error) {
+	name, err := p.consume(TkIdentifier,
+		fmt.Sprintf("Expect %s name.", kind),
+	)
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(TkLeftParen,
+		fmt.Sprintf("Expect '(' after %s name", kind),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	parameters := []*Token{}
+
+	for {
+
+		if len(parameters) >= 255 {
+			p.error(p.peek(), "Can't have more than 255 parameters.")
+		}
+
+		t, err := p.consume(TkIdentifier, "Expect parameter name.")
+		if err != nil {
+			return nil, err
+		}
+
+		parameters = append(parameters, t)
+
+		if !p.match(TkComma) {
+			break
+		}
+	}
+
+	_, err = p.consume(TkRightParen, "Expect ')' after parameters.")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(TkLeftBrace,
+		fmt.Sprintf("Expect '{' before %s body.", kind))
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFunction(name, parameters, body), nil
 
 }
 
@@ -444,7 +511,7 @@ func (p *Parser) factor() (Expr, error) {
 }
 
 // unary  ->  ( "!" | "-" ) unary
-//        | primary ;
+//        | call ;
 func (p *Parser) unary() (Expr, error) {
 	if p.match(TkBang, TkMinus) {
 		operator := p.previous()
@@ -454,7 +521,56 @@ func (p *Parser) unary() (Expr, error) {
 		}
 		return NewUnary(operator, right), nil
 	}
-	return p.primary()
+	return p.call()
+}
+
+// call		   -> primary ( "(" arguments? ")" )* ;
+//             | primary ;
+func (p *Parser) call() (Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		if p.match(TkLeftParen) {
+			expr, err = p.finishCall(expr)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) finishCall(callee Expr) (Expr, error) {
+	arguments := []Expr{}
+	if !p.check(TkRightParen) {
+
+		for {
+
+			if len(arguments) >= 255 {
+				p.error(p.peek(), "Can't have more than 255 arguments.")
+			}
+
+			ex, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			arguments = append(arguments, ex)
+
+			if !p.match(TkComma) {
+				break
+			}
+		}
+	}
+	paren, err := p.consume(TkRightParen, "Expect ')' after arguments.")
+	if err != nil {
+		return nil, err
+	}
+
+	return NewCall(callee, paren, arguments), nil
 }
 
 // primary -> "true" | "false" | "nil"
