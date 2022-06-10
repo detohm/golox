@@ -89,6 +89,19 @@ func (i *Interpreter) visitPrintStmt(stmt *Print) (any, error) {
 	return nil, nil
 }
 
+func (i *Interpreter) visitReturnStmt(stmt *Return) (any, error) {
+	var value any = nil
+	var err error = nil
+	if stmt.value != nil {
+		value, err = i.evaluate(stmt.value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// act as throwing an exception with custom return value
+	return nil, NewReturnValue(value)
+}
+
 func (i *Interpreter) visitVarStmt(stmt *Var) (any, error) {
 	var value any = nil
 	var err error = nil
@@ -340,6 +353,10 @@ func (i *Interpreter) executeBlock(statements []Stmt, environment *Environment) 
 	for _, statement := range statements {
 		err := i.execute(statement)
 		if err != nil {
+			// note: forget this statement cause me 1 day to debug
+			// forget to swap environment back when error case
+			// in Java, you can use Finally in try-catch block
+			i.environment = previous
 			return err
 		}
 	}

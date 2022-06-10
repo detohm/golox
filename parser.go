@@ -23,8 +23,11 @@ statement      -> exprStmt
 			   | forStmt
 			   | ifStmt
                | printStmt
+			   | returnStmt
 			   | whileStmt
 			   | block ;
+
+returnStmt	   -> "return" expression? ";" ;
 
 ifStmt         -> "if" "(" expression ")" statement
                ( "else" statement )? ;
@@ -201,6 +204,9 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(TkPrint) {
 		return p.printStatement()
 	}
+	if p.match(TkReturn) {
+		return p.returnStatement()
+	}
 	if p.match(TkWhile) {
 		return p.whileStatement()
 	}
@@ -254,6 +260,23 @@ func (p *Parser) printStatement() (Stmt, error) {
 		return nil, err
 	}
 	return NewPrint(expr), nil
+}
+
+func (p *Parser) returnStatement() (Stmt, error) {
+	keyword := p.previous()
+	var value Expr = nil
+	var err error = nil
+	if !p.check(TkSemicolon) {
+		value, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	_, err = p.consume(TkSemicolon, "Expect ';' after return value.")
+	if err != nil {
+		return nil, err
+	}
+	return NewReturn(keyword, value), nil
 }
 
 func (p *Parser) forStatement() (Stmt, error) {

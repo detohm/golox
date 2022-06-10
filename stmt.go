@@ -11,6 +11,7 @@ type StmtVisitor interface {
   visitFunctionStmt(stmt *Function) (any, error)
   visitIfStmt(stmt *If) (any, error)
   visitPrintStmt(stmt *Print) (any, error)
+  visitReturnStmt(stmt *Return) (any, error)
   visitVarStmt(stmt *Var) (any, error)
   visitWhileStmt(stmt *While) (any, error)
 }
@@ -91,6 +92,22 @@ func NewPrint(expression Expr) *Print {
 
 func (expr *Print) Accept(visitor StmtVisitor) (any, error) {
   return visitor.visitPrintStmt(expr)
+}
+
+type Return struct {
+  keyword *Token
+  value Expr
+}
+
+func NewReturn(keyword *Token, value Expr) *Return {
+  return &Return{
+    keyword: keyword,
+    value: value,
+  }
+}
+
+func (expr *Return) Accept(visitor StmtVisitor) (any, error) {
+  return visitor.visitReturnStmt(expr)
 }
 
 type Var struct {

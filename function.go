@@ -20,8 +20,13 @@ func (f *loxFunction) call(interpreter *Interpreter, arguments []any) (any, erro
 			arguments[i],
 		)
 	}
+
 	err := interpreter.executeBlock(f.declaration.body, environment)
 	if err != nil {
+		// act as try-catch returnvalue exception
+		if returnValue, ok := err.(ReturnValue); ok {
+			return returnValue.value, nil
+		}
 		return nil, err
 	}
 	return nil, nil
